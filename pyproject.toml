@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jsc"
+version = "0.1.0"
+description = "Resume-to-Job Match Analyzer — discover and rank software jobs by fit"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [
+    { name = "Mark Bohaychuk" },
+    { name = "Justin Norton" },
+]
+dependencies = [
+    # Web framework
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.32,<1",
+    "python-multipart>=0.0.12",
+    # Database
+    "sqlalchemy[asyncio]>=2.0,<3",
+    "asyncpg>=0.30,<1",
+    "alembic>=1.14,<2",
+    "pgvector>=0.3,<1",
+    # Schemas / config
+    "pydantic>=2.9,<3",
+    "pydantic-settings>=2.6,<3",
+    # HTTP
+    "httpx>=0.28,<1",
+    # HTML parsing
+    "beautifulsoup4>=4.12,<5",
+    "selectolax>=0.3,<1",
+    # Document parsing
+    "pymupdf>=1.24,<2",
+    "python-docx>=1.1,<2",
+    # AI providers
+    "openai>=1.55,<2",
+    # Utilities
+    "uuid-extensions>=0.1,<1",
+    "structlog>=24.4,<26",
+]
+
+[project.optional-dependencies]
+playwright = ["playwright>=1.48,<2"]
+dev = [
+    "pytest>=8.3,<9",
+    "pytest-asyncio>=0.24,<1",
+    "pytest-cov>=6.0,<7",
+    "httpx",  # for TestClient
+    "ruff>=0.8,<1",
+    "mypy>=1.13,<2",
+    "factory-boy>=3.3,<4",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jsc"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "TCH"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = ["selectolax.*", "pymupdf.*", "docx.*", "uuid7.*"]
+ignore_missing_imports = true

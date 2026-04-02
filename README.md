@@ -38,7 +38,7 @@ This project is licensed under the MIT License — see the license file for deta
 
 ---
 
-## Author
+## Authors
 
 Mark Bohaychuk
 https://github.com/mbohaychuk

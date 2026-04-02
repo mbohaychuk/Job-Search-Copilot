@@ -1,0 +1,19 @@
+"""Async SQLAlchemy engine and session factory."""
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from jsc.config import Settings
+
+
+def build_engine(settings: Settings) -> tuple[
+    "AsyncEngine",  # noqa: F821
+    async_sessionmaker[AsyncSession],
+]:
+    engine = create_async_engine(
+        settings.database_url,
+        pool_size=settings.database_pool_size,
+        max_overflow=settings.database_max_overflow,
+        echo=False,
+    )
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    return engine, session_factory

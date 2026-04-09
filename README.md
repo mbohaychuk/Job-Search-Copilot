@@ -33,11 +33,15 @@ This is **not** an auto-apply bot. No cover letters, no form filling, no browser
 
 ```
 API (FastAPI)
- └── Services (resume, job, match)
-      ├── Ingestion Pipeline
+ └── Services (resume, job, match, search)
+      ├── Ingestion Pipeline (stored jobs)
       │    ├── Fetcher (httpx + robots.txt + rate limiting)
       │    ├── Source Adapters (Greenhouse, Lever, career page, generic HTML)
       │    └── Normalizer (skill extraction, seniority, remote detection)
+      ├── Ephemeral Search Pipeline (on-demand, not persisted)
+      │    ├── Search Providers (Adzuna, ...)
+      │    ├── In-Memory Cache (query-level + job-level TTL)
+      │    └── Reuses: Fetcher, Normalizer, Embedding, Ranking
       ├── Parsing Pipeline
       │    ├── Resume Parser (PyMuPDF, python-docx)
       │    └── Profile Extractor (LLM-based structured extraction)
@@ -116,6 +120,7 @@ pytest
 | GET | `/api/v1/jobs/{id}` | Job detail |
 | GET | `/api/v1/jobs/sources` | List configured sources |
 | POST | `/api/v1/jobs/sources` | Add a job source |
+| GET | `/api/v1/search` | Ephemeral job search (Adzuna, etc.) |
 | POST | `/api/v1/matches/{candidate_id}/rank` | Trigger ranking |
 | GET | `/api/v1/matches/{candidate_id}` | Ranked match list |
 | GET | `/api/v1/matches/{candidate_id}/jobs/{job_id}` | Match detail + explanation |
@@ -130,7 +135,8 @@ pytest
 | `src/jsc/db/models/` | SQLAlchemy ORM models |
 | `src/jsc/schemas/` | Pydantic request/response schemas |
 | `src/jsc/services/` | Business logic orchestration |
-| `src/jsc/ingestion/` | Job discovery, fetching, adapter registry |
+| `src/jsc/ingestion/` | Job discovery, fetching, adapter registry (stored jobs) |
+| `src/jsc/search/` | Ephemeral search providers and in-memory cache |
 | `src/jsc/parsing/` | Resume parsing, profile extraction, job normalization, skill taxonomy |
 | `src/jsc/ranking/` | Scoring pipeline, individual scorers, explainer |
 | `src/jsc/providers/` | AI provider abstractions (embedding, LLM) |
@@ -148,6 +154,11 @@ pytest
 - **Provider abstraction**: Swap OpenAI for any embedding/LLM provider by implementing one class
 - **Pre-computed embeddings**: No API calls at ranking time — just vector math
 - **Configurable weights**: Scoring weights tunable via environment variables
+- **Ephemeral search layer for aggregator APIs**: Major job aggregators (Adzuna, etc.) prohibit persisting search results to a database under their free-tier terms of service. Rather than violating ToS or paying for enterprise licenses, we built a separate **ephemeral search layer** that queries aggregator APIs on demand, caches results in-memory with TTLs (query-level: 1 hour, job-level: 4 hours), and runs them through the full ranking pipeline — all without writing a single row to the database. This keeps us ToS-compliant while still delivering ranked, personalized results. The in-memory cache prevents redundant API calls and avoids re-computing embeddings for the same job across different searches. See [`docs/superpowers/specs/2026-04-09-ephemeral-search-design.md`](docs/superpowers/specs/2026-04-09-ephemeral-search-design.md) for the full design.
+
+### Why not just scrape Indeed/LinkedIn?
+
+We investigated every major job data source as of April 2026. Indeed's API was shut down in 2019 with no replacement. LinkedIn's Jobs API requires partner approval (no personal access) and they actively pursue legal action against scrapers. Glassdoor's API was shut down after the Indeed merger. Google for Jobs has no public API. These are all dead ends for a personal project. Adzuna's free API (250 requests/day, 16+ countries) provides the best coverage-to-effort ratio, with The Muse, Remotive, and RemoteOK as supplemental free sources.
 
 ---
 
@@ -156,7 +167,8 @@ pytest
 - Background job queue (arq + Redis) for async collection
 - Frontend (React or HTMX)
 - Scheduled crawls
-- More source adapters (Indeed RSS, LinkedIn public)
+- Additional ephemeral search providers (The Muse, Remotive, RemoteOK)
+- Additional ATS adapters (SmartRecruiters, Ashby, Workable)
 - User feedback loop for weight tuning
 - Salary estimation
 

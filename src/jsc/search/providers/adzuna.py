@@ -5,7 +5,7 @@ Free tier: 250 requests/day, 25/minute.
 """
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 from urllib.parse import quote_plus, urlencode
 

@@ -3,8 +3,11 @@
 from typing import Any
 
 from jsc.search.base import SearchProvider
+from jsc.search.providers.adzuna import AdzunaProvider
 
-_PROVIDERS: dict[str, type] = {}
+_PROVIDERS: dict[str, type] = {
+    "adzuna": AdzunaProvider,
+}
 
 
 def get_provider(name: str, settings: Any) -> SearchProvider:

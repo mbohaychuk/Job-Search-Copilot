@@ -137,6 +137,8 @@ class TestSearchService:
         assert result.attribution is not None
         assert result.items[0].match_score == 0.85
         assert result.items[0].provider == "adzuna"
+        # Skills extracted by normalizer should appear in the response
+        assert isinstance(result.items[0].skills, list)
 
     async def test_search_uses_query_cache_on_second_call(self):
         settings = _make_settings()

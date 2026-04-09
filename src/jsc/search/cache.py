@@ -13,6 +13,8 @@ class _LRUTtlStore(Generic[V]):
     """LRU-ordered dict with per-entry TTL expiration and a capacity cap."""
 
     def __init__(self, ttl: float, max_size: int) -> None:
+        if max_size < 1:
+            raise ValueError(f"max_size must be >= 1, got {max_size}")
         self._ttl = ttl
         self._max_size = max_size
         self._store: OrderedDict[str, tuple[V, float]] = OrderedDict()
@@ -85,7 +87,11 @@ class SearchCache:
         self._jobs.sweep(now)
 
     def _maybe_sweep(self) -> None:
+        """Periodic sweep — amortises cleanup cost over batches of writes."""
         self._put_count += 1
         if self._put_count >= 100:
             self._put_count = 0
-            self.sweep()
+            try:
+                self.sweep()
+            except Exception:
+                pass  # never let maintenance corrupt a write path

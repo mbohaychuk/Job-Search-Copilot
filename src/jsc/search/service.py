@@ -14,6 +14,7 @@ from jsc.ingestion.fetcher import Fetcher
 from jsc.parsing.job_normalizer import JobNormalizer
 from jsc.providers.base import EmbeddingProvider
 from jsc.ranking.pipeline import RankingPipeline
+from jsc.schemas.job import JobSkillRead
 from jsc.schemas.search import SearchAttribution, SearchResponse, SearchResultRead
 from jsc.search.base import SearchPage, SearchProvider, SearchQuery
 from jsc.search.cache import SearchCache
@@ -120,7 +121,10 @@ class SearchService:
                 seniority=job.seniority,
                 posted_at=job.posted_at,
                 url=job.url,
-                skills=[],
+                skills=[
+                    JobSkillRead(skill_name=s.skill_name, is_required=s.is_required)
+                    for s in job.skills
+                ],
                 salary_min=job.salary_min,
                 salary_max=job.salary_max,
                 salary_currency=job.salary_currency,

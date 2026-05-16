@@ -54,12 +54,10 @@ class SearchService:
         (on miss) -> normalize each job -> build transient JobPosting objects ->
         embed descriptions -> cache processed postings -> rank -> build response.
         """
-        # Load candidate
         candidate = await self._session.get(Candidate, candidate_id)
         if candidate is None:
             raise ValueError(f"Candidate {candidate_id} not found")
 
-        # Check query cache
         cache_key = f"{provider.name}:{query.cache_key()}"
         cached_page = self._cache.get_query(cache_key)
 
@@ -104,10 +102,8 @@ class SearchService:
             if self._cache.get_job(j_hash) is None:
                 self._cache.put_job(j_hash, posting)
 
-        # Rank all postings against the candidate
         ranked = await self._ranking.rank(candidate, postings)
 
-        # Build response
         items = []
         for match in ranked:
             job = match.job

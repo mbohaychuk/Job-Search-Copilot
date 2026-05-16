@@ -51,7 +51,6 @@ class MatchExplainer:
                 )
             )
 
-            # Generate strengths and gaps
             if name == "Semantic Similarity":
                 if score >= 0.80:
                     strengths.append("Strong overall profile alignment")
@@ -99,7 +98,6 @@ class MatchExplainer:
                         f"Location mismatch — job is onsite at {details.get('job_location', 'unknown')}"
                     )
 
-        # Build summary
         if overall_score >= 0.80:
             summary = "Strong match"
         elif overall_score >= 0.60:

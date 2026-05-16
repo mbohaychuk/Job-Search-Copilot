@@ -59,11 +59,9 @@ class JobService:
                 JobPosting.title.ilike(search) | JobPosting.description_text.ilike(search)
             )
 
-        # Count total
         count_stmt = select(func.count()).select_from(stmt.subquery())
         total = (await self._session.execute(count_stmt)).scalar_one()
 
-        # Paginate
         stmt = stmt.order_by(JobPosting.posted_at.desc().nulls_last(), JobPosting.created_at.desc())
         stmt = stmt.offset((page - 1) * page_size).limit(page_size)
 

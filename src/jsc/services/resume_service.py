@@ -44,11 +44,9 @@ class ResumeService:
         4. Generate embedding
         5. Store candidate + skills + roles + document
         """
-        # Extract text
         raw_text = self._parser.extract_text(file_bytes, content_type)
         file_hash = self._parser.file_hash(file_bytes)
 
-        # Create or fetch candidate
         if candidate_id:
             candidate = await self._session.get(Candidate, candidate_id)
             if candidate is None:
@@ -58,17 +56,14 @@ class ResumeService:
             self._session.add(candidate)
             await self._session.flush()
 
-        # Extract structured profile
         profile = await self._extractor.extract(raw_text)
 
-        # Update candidate fields
         candidate.name = profile.name
         candidate.email = profile.email
         candidate.summary = profile.summary
         candidate.years_experience = profile.years_experience
         candidate.preferred_seniority = profile.preferred_seniority
 
-        # Generate embedding from full resume text
         try:
             vectors = await self._embedder.embed([raw_text[:8000]])
             if vectors:
@@ -76,7 +71,6 @@ class ResumeService:
         except Exception:
             logger.warning("resume_embedding_failed", candidate_id=str(candidate.id))
 
-        # Clear and rebuild skills
         candidate.skills.clear()
         for skill in profile.skills:
             candidate.skills.append(
@@ -89,7 +83,6 @@ class ResumeService:
                 )
             )
 
-        # Clear and rebuild roles
         candidate.roles.clear()
         for role in profile.roles:
             candidate.roles.append(
@@ -103,7 +96,6 @@ class ResumeService:
                 )
             )
 
-        # Store resume document
         resume_doc = ResumeDocument(
             candidate_id=candidate.id,
             filename=filename,

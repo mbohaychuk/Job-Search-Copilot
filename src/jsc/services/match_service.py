@@ -31,7 +31,6 @@ class MatchService:
         self, candidate_id: UUID
     ) -> RankingSummary:
         """Rank all active jobs for a candidate and store results."""
-        # Load candidate with skills and roles
         stmt = (
             select(Candidate)
             .options(selectinload(Candidate.skills), selectinload(Candidate.roles))
@@ -42,7 +41,6 @@ class MatchService:
         if candidate is None:
             raise ValueError(f"Candidate {candidate_id} not found")
 
-        # Load active jobs with skills
         jobs_result = await self._session.execute(
             select(JobPosting)
             .options(selectinload(JobPosting.skills))
@@ -53,10 +51,8 @@ class MatchService:
         if not jobs:
             return RankingSummary(total_ranked=0)
 
-        # Run ranking
         ranked = await self._pipeline.rank(candidate, jobs)
 
-        # Store/update match results
         for match in ranked:
             existing = await self._session.execute(
                 select(MatchResult).where(

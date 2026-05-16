@@ -44,7 +44,6 @@ class IngestionCoordinator:
 
         Returns counts: jobs_found, jobs_new, jobs_duplicate, sources_crawled.
         """
-        # Fetch sources
         stmt = select(JobSource).where(JobSource.is_active.is_(True))
         if source_ids:
             stmt = stmt.where(JobSource.id.in_(source_ids))
@@ -60,7 +59,6 @@ class IngestionCoordinator:
                     counts[k] += v
                 counts["sources_crawled"] += 1
 
-                # Update last_crawled_at
                 source.last_crawled_at = datetime.now(timezone.utc)
 
         await self._session.commit()
@@ -79,12 +77,10 @@ class IngestionCoordinator:
             logger.error("unknown_adapter", adapter_type=source.adapter_type, source=source.name)
             return counts
 
-        # Discover jobs
         discovered = await adapter.discover(source, fetcher)
         counts["jobs_found"] = len(discovered)
         logger.info("source_discovered", source=source.name, count=len(discovered))
 
-        # Process each discovered job
         for job_info in discovered:
             was_new = await self._process_job(source, adapter, fetcher, job_info)
             if was_new:
@@ -126,7 +122,6 @@ class IngestionCoordinator:
             content_type = "html" if "html" in result.content_type else "text"
             status = result.status
 
-        # Store raw content
         raw = JobPostingRaw(
             source_id=source.id,
             url=job_info.url,
@@ -136,13 +131,9 @@ class IngestionCoordinator:
         )
         self._session.add(raw)
 
-        # Parse raw into structured data
         parsed = await adapter.parse(raw, source)
-
-        # Normalize
         normalized = await self._normalizer.normalize(parsed)
 
-        # Check fuzzy dedup
         d_hash = dedup_hash(
             normalized.title,
             normalized.company or "",
@@ -152,7 +143,6 @@ class IngestionCoordinator:
         if is_dup:
             return False
 
-        # Generate embedding
         embedding = None
         if normalized.description_text and self._settings.openai_api_key:
             try:
@@ -161,7 +151,6 @@ class IngestionCoordinator:
             except Exception:
                 logger.warning("embedding_failed", url=job_info.url)
 
-        # Create the normalized job posting
         posting = JobPosting(
             source_id=source.id,
             external_id=job_info.external_id,
@@ -187,10 +176,8 @@ class IngestionCoordinator:
         self._session.add(posting)
         await self._session.flush()
 
-        # Link raw to posting
         raw.job_posting_id = posting.id
 
-        # Store skills
         from jsc.db.models.job import JobSkill
 
         for skill_name in normalized.skills:

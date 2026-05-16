@@ -18,7 +18,8 @@ logger = structlog.get_logger()
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan — startup and shutdown."""
     settings = Settings()
-    engine, _ = build_engine(settings)
+    engine, session_factory = build_engine(settings)
+    app.state.session_factory = session_factory
     logger.info("app_started", database=settings.database_url.split("@")[-1])
     yield
     await engine.dispose()
@@ -36,7 +37,6 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.api_cors_origins,
@@ -45,7 +45,6 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Include all routers
     app.include_router(root_router)
 
     return app

@@ -123,9 +123,8 @@ def get_job_service(
 
 def get_ranking_pipeline(
     settings: Settings = Depends(get_settings),
-    taxonomy: SkillTaxonomy = Depends(get_skill_taxonomy),
 ) -> RankingPipeline:
-    return RankingPipeline(settings, taxonomy)
+    return RankingPipeline(settings)
 
 
 def get_match_service(

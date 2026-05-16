@@ -148,7 +148,29 @@ pytest
 
 ## Design Decisions
 
-- **Hybrid ranking over pure-LLM**: Cheaper, faster, explainable, and tunable
+### Hybrid ranking over pure-LLM
+
+Sending every candidate job through an LLM at rank time would have been the simplest possible design — pass the resume and the job description in, ask "how good a fit, 0 to 100, and why?", store the answer. The reasons we didn't:
+
+- **Latency.** A `/rank` call against a hundred jobs is one user action. Even at GPT-4o-mini's ~1s per call serialized, that's a minute and a half of waiting. Embedding-based scoring is vector math against pre-computed embeddings: the same operation finishes in tens of milliseconds.
+- **Determinism.** The same resume against the same job should produce the same rank. LLM scores drift between runs, which makes it impossible to A/B-test weight tuning or to tell a user "this job moved up because you added Python to your skills."
+- **Explanation as a first-class output, not a re-prompt.** `MatchExplainer` (see `src/jsc/ranking/explainer.py`) emits per-component grades (A+ through F), the weighted contribution of each scorer, and concrete strengths/gaps lists pulled from the matched and missing required skills. An LLM could produce similar prose, but the grades would be inferred from the prose rather than mechanically derivable from the math.
+- **Cost at scale.** Zero LLM calls at rank time. Embeddings are computed once per job at ingestion. Re-ranking after a resume edit re-embeds one document, not thousands.
+
+The pipeline runs five scorers in parallel, each producing a 0–1 score and structured details, then takes a weighted sum:
+
+| Scorer | Default weight | What it measures |
+|---|---|---|
+| Semantic | 0.40 | Cosine similarity between resume embedding and job embedding (OpenAI `text-embedding-3-small`, 1536 dim). The single strongest signal of fit. |
+| Skill coverage | 0.25 | Required-skill overlap weighted 70%, optional-skill overlap weighted 30%. Deterministic — concrete evidence over latent semantics. |
+| Title match | 0.15 | Catches obvious mismatches (a DevOps resume applying to a marketing role) without depending on description prose. |
+| Seniority | 0.10 | Senior role vs. junior candidate gets penalized; junior role vs. senior candidate gets penalized. |
+| Location | 0.10 | Same-city, in-target-list, remote-friendly, or out-of-scope. |
+
+Weights are read from environment variables (`WEIGHT_SEMANTIC`, etc.) and validated to sum to 1.0 at startup. The defaults are starting points; real tuning would come from accumulated feedback signals (the user marking ranked jobs as fits or non-fits over time), which is on the roadmap.
+
+### Other decisions
+
 - **Shared skill taxonomy**: Canonical skill names with aliases enable deterministic matching
 - **Raw storage**: Original job HTML/JSON preserved for re-parsing without re-crawling
 - **Provider abstraction**: Swap OpenAI for any embedding/LLM provider by implementing one class

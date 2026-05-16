@@ -69,7 +69,7 @@ class Settings(BaseSettings):
 
     @property
     def database_url_sync(self) -> str:
-        """Sync URL for Alembic (strips async driver from scheme)."""
+        """Sync URL for Alembic (swaps asyncpg for psycopg)."""
         parsed = urlparse(self.database_url)
-        scheme = parsed.scheme.split("+")[0]
-        return urlunparse(parsed._replace(scheme=scheme))
+        base = parsed.scheme.split("+")[0]
+        return urlunparse(parsed._replace(scheme=f"{base}+psycopg"))

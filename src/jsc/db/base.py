@@ -1,17 +1,12 @@
 """Declarative base with common mixins for all models."""
 
 from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import DateTime, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
-# Use uuid_extensions.uuid7 if available, fall back to uuid4
-try:
-    from uuid_extensions import uuid7 as _generate_uuid
-except ImportError:
-    _generate_uuid = uuid4
+from uuid6 import uuid7 as _generate_uuid
 
 
 class Base(DeclarativeBase):
@@ -37,7 +32,7 @@ class TimestampMixin:
 
 
 class UUIDPrimaryKeyMixin:
-    """Adds a UUID primary key (v7 when available, v4 fallback)."""
+    """Adds a UUIDv7 primary key (time-ordered for index locality)."""
 
     id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),

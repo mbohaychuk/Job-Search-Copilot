@@ -202,10 +202,11 @@ This project is licensed under the MIT License — see the license file for deta
 
 ---
 
-## Authors
+## Author
 
 Mark Bohaychuk
 https://github.com/mbohaychuk
 
-Justin Norton
-https://github.com/JustinN9
+## Acknowledgements
+
+README contributions by Justin Norton (https://github.com/JustinN9).
